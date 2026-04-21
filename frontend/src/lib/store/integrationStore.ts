@@ -56,7 +56,7 @@ export const useIntegrationStore = create<IntegrationState>((set, get) => ({
       // Re-fetch to update status (handles demo mode)
       await get().fetchIntegrations();
       return data;
-    } catch (err) {
+    } catch (_err) {
       return { status: "error", message: "Could not reach backend." };
     }
   },
