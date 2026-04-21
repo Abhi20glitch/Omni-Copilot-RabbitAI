@@ -1,0 +1,26 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.env
+*.egg-info/
+.pytest_cache/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/.env
+
+# Prisma
+frontend/prisma/dev.db
+frontend/prisma/dev.db-journal
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/

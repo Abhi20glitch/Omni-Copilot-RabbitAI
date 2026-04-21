@@ -1,0 +1,1 @@
+# Omni Copilot — Tool stubs
