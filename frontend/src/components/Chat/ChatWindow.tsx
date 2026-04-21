@@ -23,7 +23,7 @@ export default function ChatWindow() {
     activeSessionId,
     isStreaming,
     addMessage,
-    updateLastAssistantMessage,
+    _updateLastAssistantMessage,
     setStreaming,
     createSession,
   } = useChatStore();
