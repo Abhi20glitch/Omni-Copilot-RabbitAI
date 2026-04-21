@@ -1,0 +1,50 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  image        String?
+  createdAt    DateTime      @default(now())
+  integrations Integration[]
+  chats        Chat[]
+  memories     Memory[]
+}
+
+model Integration {
+  id           String    @id @default(cuid())
+  userId       String
+  toolId       String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  connectedAt  DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id])
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  messages  String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Memory {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
