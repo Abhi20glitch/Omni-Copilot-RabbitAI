@@ -7,6 +7,9 @@ backend/.env
 *.egg-info/
 .pytest_cache/
 
+# OAuth tokens — never commit these
+backend/tokens/
+
 # Node
 frontend/node_modules/
 frontend/.next/
