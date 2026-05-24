@@ -1,6 +1,4 @@
-"""
-CodeAgent — Handles GitHub issues, PRs, and code generation.
-"""
+"""CodeAgent — Handles GitHub issues, PRs, and code generation."""
 
 from __future__ import annotations
 import os
@@ -21,10 +19,7 @@ def _get_llm():
 
 
 class CodeAgent:
-    """Specialist agent for GitHub and code-related operations."""
-
     def __init__(self) -> None:
-        self.tools = ["get_github_issues", "get_pull_requests", "read_repo_file", "create_issue", "generate_code_snippet"]
         self._llm = None
 
     def _get_llm(self):
@@ -33,53 +28,65 @@ class CodeAgent:
         return self._llm
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
+        from tools.github import get_issues, get_pull_requests, get_user_repos, create_issue
+
         last_msg = state["messages"][-1]["content"] if state["messages"] else ""
-
-        state["agent_steps"].append({
-            "agent": "code",
-            "action": f"Processing code request: {last_msg[:60]}",
-        })
-
         msg_lower = last_msg.lower()
-        is_github = any(k in msg_lower for k in ("github", "issue", "pr", "pull request", "repo", "commit"))
 
-        llm = self._get_llm()
-        if llm:
-            try:
-                from langchain_core.messages import HumanMessage, SystemMessage
-                if is_github:
-                    system_text = (
-                        "You are a GitHub assistant for Omni Copilot. "
-                        "GitHub is not yet connected (OAuth required). "
-                        "Help the user understand what GitHub operation you would perform once connected, "
-                        "and guide them to connect GitHub from the Integrations Hub. "
-                        "Be specific about the repo operation."
-                    )
-                else:
-                    system_text = (
-                        "You are a code assistant for Omni Copilot. "
-                        "Help the user with their code question. You can generate code snippets, "
-                        "explain concepts, and provide technical guidance. "
-                        "Be concise and use code blocks where appropriate."
-                    )
-                system = SystemMessage(content=system_text)
-                response = llm.invoke([system, HumanMessage(content=last_msg)])
-                icon = "🐙" if is_github else "💻"
-                label = "GitHub" if is_github else "Code"
-                content = f"{icon} [{label}] {response.content}"
-            except Exception:
-                content = self._fallback(last_msg, is_github)
+        state["agent_steps"].append({"agent": "code", "action": f"Processing: {last_msg[:60]}"})
+
+        if any(k in msg_lower for k in ("my repos", "repositories", "list repos")):
+            content = get_user_repos()
+
+        elif any(k in msg_lower for k in ("pull request", " pr ", "prs")):
+            content = get_pull_requests()
+
+        elif "issue" in msg_lower and any(k in msg_lower for k in ("create", "open", "new")):
+            # Use LLM to extract issue details
+            llm = self._get_llm()
+            if llm:
+                try:
+                    from langchain_core.messages import HumanMessage, SystemMessage
+                    system = SystemMessage(content=(
+                        "You are a GitHub assistant. Help the user create a GitHub issue. "
+                        "Ask for repo name, title, and description if not provided. Be concise."
+                    ))
+                    resp = llm.invoke([system, HumanMessage(content=last_msg)])
+                    content = f"🐙 [GitHub] {resp.content}"
+                except Exception:
+                    content = get_issues()
+            else:
+                content = get_issues()
+
+        elif "issue" in msg_lower:
+            content = get_issues()
+
         else:
-            content = self._fallback(last_msg, is_github)
+            # General code question — use LLM
+            llm = self._get_llm()
+            if llm:
+                try:
+                    from langchain_core.messages import HumanMessage, SystemMessage
+                    system = SystemMessage(content=(
+                        "You are an expert software engineer and code assistant. "
+                        "Help with code questions, debugging, architecture, and best practices. "
+                        "Use code blocks for code snippets. Be concise and accurate."
+                    ))
+                    # Include conversation history
+                    from langchain_core.messages import AIMessage
+                    lc_msgs = [system]
+                    for m in state["messages"]:
+                        if m["role"] == "user":
+                            lc_msgs.append(HumanMessage(content=m["content"]))
+                        elif m["role"] == "assistant":
+                            lc_msgs.append(AIMessage(content=m["content"]))
+                    resp = llm.invoke(lc_msgs)
+                    content = f"💻 {resp.content}"
+                except Exception as e:
+                    content = f"💻 [Code] Error: {str(e)}"
+            else:
+                content = f"💻 [Code] Set GROQ_API_KEY to enable AI code assistance."
 
         state["messages"].append({"role": "assistant", "content": content})
         state["agent_steps"].append({"agent": "code", "action": "Code operation completed"})
         return state
-
-    def _fallback(self, query: str, is_github: bool) -> str:
-        if is_github:
-            return (
-                f"🐙 [GitHub] I'd handle: \"{query[:60]}\" — "
-                "connect GitHub from the Integrations Hub to enable this."
-            )
-        return f"💻 [Code] I received your code request: \"{query[:60]}\". Set GROQ_API_KEY to enable AI code generation."

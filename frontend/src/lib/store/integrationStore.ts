@@ -31,10 +31,12 @@ export const useIntegrationStore = create<IntegrationState>((set, get) => ({
   fetchIntegrations: async () => {
     set({ loading: true });
     try {
-      const res = await fetch(`${API}/api/integrations`);
+      const res = await fetch(`${API}/api/integrations/`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       set({ integrations: data.integrations || [], loading: false });
-    } catch {
+    } catch (e) {
+      console.error("fetchIntegrations failed:", e);
       set({ loading: false });
     }
   },

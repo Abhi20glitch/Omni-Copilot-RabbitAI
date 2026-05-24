@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 from routers import chat, integrations, memory, voice  # noqa: E402
 
@@ -16,6 +17,7 @@ app = FastAPI(
     title="Omni Copilot API",
     description="Universal AI workspace backend with multi-agent orchestration",
     version="1.0.0",
+    redirect_slashes=False,
 )
 
 # CORS — allow the Next.js frontend
